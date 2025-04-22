@@ -1,6 +1,7 @@
 import time
 import paho.mqtt.client as paho
 import ssl
+import cv2
 
 def on_connect(client, userdata, flags, rc, properties=None):
     print("CONNACK received with code %s." % rc)
@@ -31,7 +32,28 @@ except ssl.SSLError as e:
 
 client.loop_start()  
 
-while True:  
-    client.publish("Lab L3/motion", payload="test", qos=1)
-    time.sleep(2) 
+cap = cv2.VideoCapture(0)
+ret, frame1 = cap.read()
+ret, frame2 = cap.read()
+
+
+while cap.isOpened():
+    diff = cv2.absdiff(frame1, frame2)
+    gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    _, thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
+    dilated = cv2.dilate(thresh, None, iterations=3)
+    contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    motion_detected = False
+    for contour in contours:
+        if cv2.contourArea(contour) > 800:
+            motion_detected = True
+
+    if motion_detected:
+        client.publish("Lab L3/motion", payload="Motion detected", qos=1)
+    else:
+        client.publish("Lab L3/motion", payload="No Motion detected", qos=1)
+    
+    time.sleep(2)
 

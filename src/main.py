@@ -3,14 +3,27 @@ from supabase import create_client, Client
 from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from ORtools import check_availabiliy
+import json
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all domains (be careful for production)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
 SUPABASE_URL = "https://xoyzsjymkfcwtumzqzha.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhveXpzanlta2Zjd3R1bXpxemhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTk4MTUsImV4cCI6MjA1OTc5NTgxNX0.VLMHbn4-rMaz9DWK1zcIJccWBnaQhrepek-umKH2s0Y"
 url = SUPABASE_URL
 key = SUPABASE_KEY
 supabase: Client = create_client(url, key)
+
+
 
 class Resource(BaseModel):
     name: str
@@ -114,6 +127,33 @@ def modify_booking(request : ModifyBookingRequest):
     else:
         print("Resource not available on the specified time slot")
 
+
+class Information(BaseModel):
+    resource_name : str
+    booked_date : str
+    
+@app.get("/get-bookings")
+def get_bookings(information : Information):
+    response1 = (
+        supabase.table("Bookings").select("Booking_EndTime","Booking_StartTime")
+        .eq("Booking_On",information.booked_date).eq("Resource_Name",information.resource_name)
+        .execute()
+    )
+    startimes=[]
+    endtimes=[]
+    for x in response1.data:
+       startimes.append(x["Booking_StartTime"])
+       endtimes.append(x["Booking_EndTime"])
+    
+
+    data = {
+    "startimes": startimes,
+    "endtimes": endtimes
+    }
+
+    json_object = json.dumps(data)
+
+    return data
 
    
 
