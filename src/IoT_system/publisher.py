@@ -33,11 +33,13 @@ except ssl.SSLError as e:
 client.loop_start()  
 
 cap = cv2.VideoCapture(0)
-ret, frame1 = cap.read()
-ret, frame2 = cap.read()
-
+ret1,frame1 = cap.read()
 
 while cap.isOpened():
+    ret, frame2 = cap.read()
+    if not ret:
+        break
+
     diff = cv2.absdiff(frame1, frame2)
     gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -54,6 +56,8 @@ while cap.isOpened():
         client.publish("Lab L3/motion", payload="Motion detected", qos=1)
     else:
         client.publish("Lab L3/motion", payload="No Motion detected", qos=1)
-    
+
+    frame1 = frame2 
     time.sleep(2)
+
 
