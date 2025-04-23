@@ -128,32 +128,42 @@ def modify_booking(request : ModifyBookingRequest):
         print("Resource not available on the specified time slot")
 
 
-class Information(BaseModel):
-    resource_name : str
-    booked_date : str
+
     
 @app.get("/get-bookings")
-def get_bookings(information : Information):
+def get_bookings(resource_name: str, booked_date: str):
     response1 = (
-        supabase.table("Bookings").select("Booking_EndTime","Booking_StartTime")
-        .eq("Booking_On",information.booked_date).eq("Resource_Name",information.resource_name)
+        supabase.table("Bookings").select("Booking_EndTime","Booking_StartTime","id")
+        .eq("Booking_On",booked_date).eq("Resource_Name",resource_name)
         .execute()
     )
-    startimes=[]
-    endtimes=[]
+    startimes = []
+    endtimes = []
+    ids = []
     for x in response1.data:
        startimes.append(x["Booking_StartTime"])
        endtimes.append(x["Booking_EndTime"])
-    
+       ids.append(x["id"])
 
     data = {
     "startimes": startimes,
-    "endtimes": endtimes
+    "endtimes": endtimes,
+    "ids": ids
     }
 
     json_object = json.dumps(data)
 
     return data
+class DeleteBookingRequest(BaseModel):
+    booking_id: int
+@app.delete("/delete-booking")
+def delete_booking(request: DeleteBookingRequest):
+    response = supabase.table("Bookings").delete().eq("id", request.booking_id).execute()
+
+    if response.data:
+        return {"status": "success", "message": f"Booking ID {request.booking_id} deleted."}
+    else:
+        return {"status": "error", "message": "Booking not found or deletion failed."}
 
    
 
