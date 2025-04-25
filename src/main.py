@@ -131,7 +131,7 @@ def modify_booking(request : ModifyBookingRequest):
 
 
     
-@app.get("/get-bookings")
+@app.get("/get-bookings") ##this api endpoint is associated with the IoT part
 def get_bookings(resource_name: str, booked_date: str):
     response1 = (
         supabase.table("Bookings").select("booking_endtime","booking_starttime","id")
@@ -177,18 +177,12 @@ def check_availability(resource_name : str ,booking_date :str):
     .execute()
     )
 
-    availability = {}
+    already_booked = []
 
-    for t in range(8, 17):
-        status = "Available"
-        for x in response.data:
-            if (x["booking_starttime"] <= t < x["booking_endtime"]) or (x["booking_starttime"] < t + 1 <= x["booking_endtime"]):
-                status = "Not Available"
-                break
-        key = f"{t}:{t+1}"
-        availability[key] = status
-    
-    return availability
+    for x in response.data:
+        time_slot = f"{x["booking_starttime"]} : {x["booking_endtime"]}"
+        already_booked.append(time_slot)
+    return already_booked
     
 
     
