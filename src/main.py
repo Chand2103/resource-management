@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ORtools import check_availabiliy
 import json
+from datetime import date
+from datetime import time
 
 app = FastAPI()
 
@@ -28,10 +30,11 @@ supabase: Client = create_client(url, key)
 class Resource(BaseModel):
     name: str
     type: str
+    capacity :int
 
 @app.get("/")
 def read_root():
-   response = supabase.table("Resources").select("*").eq("Resource_Name","MathBook").execute()
+   response = supabase.table("Resources").select("*").execute()
    return response
 
 
@@ -40,8 +43,9 @@ def insert_resource(resource: Resource):
     response = (
         supabase.table("Resources")
         .insert({
-            "Resource_Name": resource.name,
-            "Resource_Type": resource.type
+            "resource_name": resource.name,
+            "resource_type": resource.type,
+            "capacity":resource.capacity
         })
         .execute()
     )
@@ -50,35 +54,33 @@ def insert_resource(resource: Resource):
 class Booking (BaseModel):
     booked_by : str
     resource_name : str
-    booking_period : int
-    start : int
-    end : int
+    start : str
+    end : str
     booked_date : str
 
 @app.post("/create-booking")
 def create_booking(booking : Booking):
    response1 = (
-        supabase.table("Bookings").select("Booking_EndTime","Booking_StartTime")
-        .eq("Booking_On",booking.booked_date).eq("Resource_Name",booking.resource_name)
+        supabase.table("Bookings").select("booking_endtime","booking_starttime")
+        .eq("booking_on",booking.booked_date).eq("resource_name",booking.resource_name)
         .execute()
     )
    startimes=[]
    endtimes=[]
    for x in response1.data:
-      startimes.append(x["Booking_StartTime"])
-      endtimes.append(x["Booking_EndTime"])
+      startimes.append(x["booking_starttime"])
+      endtimes.append(x["booking_endtime"])
    available = check_availabiliy(startimes,endtimes,booking.start,booking.end)
    if available:
          response2 = (
             supabase.table("Bookings")
             .insert(
                   {
-                     "Booked_By" : booking.booked_by,
-                     "Resource_Name" : booking.resource_name,
-                     "Booking_Period" : booking.booking_period,
-                     "Booking_StartTime" : booking.start,
-                     "Booking_EndTime" : booking.end,
-                     "Booking_On" : booking.booked_date
+                     "booked_by" : booking.booked_by,
+                     "resource_name" : booking.resource_name,
+                     "booking_starttime" : booking.start,
+                     "booking_endtime" : booking.end,
+                     "booking_on" : booking.booked_date
                   }
             ).execute()
          )
@@ -95,31 +97,30 @@ class ModifyBookingRequest(BaseModel):
 
 @app.post("/modify-booking")
 def modify_booking(request : ModifyBookingRequest):
-    response_1 = (supabase.table("Bookings").select("id").eq("Resource_Name",request.old_booking.resource_name).eq("Booking_On",request.old_booking.booked_date)
-                  .eq("Booking_StartTime",request.old_booking.start).eq("Booking_EndTime",request.old_booking.end).execute())
+    response_1 = (supabase.table("Bookings").select("id").eq("resource_name",request.old_booking.resource_name).eq("booking_on",request.old_booking.booked_date)
+                  .eq("booking_starttime",request.old_booking.start).eq("booking_endtime",request.old_booking.end).execute())
     
     current_booking_id = response_1.data[0]["id"]
     
     response_2 = (
-        supabase.table("Bookings").select("Booking_EndTime","Booking_StartTime")
-        .eq("Booking_On",request.new_booking.booked_date).eq("Resource_Name",request.new_booking.resource_name).neq("id",current_booking_id)
+        supabase.table("Bookings").select("booking_endtime","booking_starttime")
+        .eq("booking_on",request.new_booking.booked_date).eq("resource_name",request.new_booking.resource_name).neq("id",current_booking_id)
         .execute()
     )
     startimes=[]
     endtimes=[]
     for x in response_2.data:
-       startimes.append(x["Booking_StartTime"])
-       endtimes.append(x["Booking_EndTime"])
+       startimes.append(x["booking_starttime"])
+       endtimes.append(x["booking_endtime"])
     available = check_availabiliy(startimes,endtimes,request.new_booking.start,request.new_booking.end)
     if available:
        supabase.table("Bookings") \
         .update({
-        "Booked_By": request.new_booking.booked_by,
-        "Resource_Name": request.new_booking.resource_name,
-        "Booking_Period": request.new_booking.booking_period,
-        "Booking_StartTime": request.new_booking.start,
-        "Booking_EndTime": request.new_booking.end,
-        "Booking_On": request.new_booking.booked_date
+        "booked_by": request.new_booking.booked_by,
+        "resource_name": request.new_booking.resource_name,
+        "booking_starttime": request.new_booking.start,
+        "booking_endtime": request.new_booking.end,
+        "booking_on": request.new_booking.booked_date
     }) \
     .eq("id", current_booking_id) \
     .execute()
@@ -133,16 +134,16 @@ def modify_booking(request : ModifyBookingRequest):
 @app.get("/get-bookings")
 def get_bookings(resource_name: str, booked_date: str):
     response1 = (
-        supabase.table("Bookings").select("Booking_EndTime","Booking_StartTime","id")
-        .eq("Booking_On",booked_date).eq("Resource_Name",resource_name)
+        supabase.table("Bookings").select("booking_endtime","booking_starttime","id")
+        .eq("booking_on",booked_date).eq("resource_name",resource_name)
         .execute()
     )
     startimes = []
     endtimes = []
     ids = []
     for x in response1.data:
-       startimes.append(x["Booking_StartTime"])
-       endtimes.append(x["Booking_EndTime"])
+       startimes.append(x["booking_starttime"])
+       endtimes.append(x["booking_endtime"])
        ids.append(x["id"])
 
     data = {
@@ -151,11 +152,11 @@ def get_bookings(resource_name: str, booked_date: str):
     "ids": ids
     }
 
-    json_object = json.dumps(data)
-
     return data
+
 class DeleteBookingRequest(BaseModel):
     booking_id: int
+
 @app.delete("/delete-booking")
 def delete_booking(request: DeleteBookingRequest):
     response = supabase.table("Bookings").delete().eq("id", request.booking_id).execute()
@@ -165,6 +166,29 @@ def delete_booking(request: DeleteBookingRequest):
     else:
         return {"status": "error", "message": "Booking not found or deletion failed."}
 
-   
+
+@app.get("/check-availability")
+def check_availability(resource_name : str ,booking_date :str):
+    response = (
+    supabase.table("Bookings")
+    .select("booking_endtime", "booking_starttime")
+    .eq("resource_name", resource_name)
+    .eq("booking_on", booking_date)
+    .execute()
+    )
+
+    availability = {}
+
+    for t in range(8, 17):
+        status = "Available"
+        for x in response.data:
+            if (x["booking_starttime"] <= t < x["booking_endtime"]) or (x["booking_starttime"] < t + 1 <= x["booking_endtime"]):
+                status = "Not Available"
+                break
+        key = f"{t}:{t+1}"
+        availability[key] = status
+    
+    return availability
+    
 
     

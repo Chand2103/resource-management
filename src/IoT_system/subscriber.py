@@ -10,20 +10,24 @@ client = paho.Client(client_id="chand3", protocol=paho.MQTTv5)
 client.tls_set(tls_version=ssl.PROTOCOL_TLSv1_2)
 client.username_pw_set("cam_sensor", "Cam_sensor1")
 
-last_msg_recived_at = time.time()
+
 sl_tz = pytz.timezone('Asia/Colombo')
-last_msg_recived_at_sl_time_zone = datetime.now(sl_tz)
+last_msg_recived_at = datetime.now(sl_tz)
 
+def time_to_minutes(time_str):
+    
+    t = datetime.strptime(time_str, "%H:%M:%S")
+    return t.hour * 60 + t.minute
 
-def fetch_and_check_bookings(sl_tz, last_msg_recived_at_sl_time_zone):
+def fetch_and_check_bookings(sl_tz, last_msg_recived_at):
     curr_time = datetime.now(sl_tz)
 
-    curr = curr_time.hour + curr_time.minute / 100
-    last = last_msg_recived_at_sl_time_zone.hour + last_msg_recived_at_sl_time_zone.minute / 100
+    curr = time_to_minutes(curr_time)
+    last = time_to_minutes(last_msg_recived_at)
 
-    date = f"{curr_time.year}/{curr_time.month}/{curr_time.day}"
+    date = datetime.today().date()
     params = {
-        "resource_name": "L3 Lab",
+        "resource_name": "L3",
         "booked_date": date
     }
 
@@ -32,6 +36,8 @@ def fetch_and_check_bookings(sl_tz, last_msg_recived_at_sl_time_zone):
         response_data = response.json()
         start_times = response_data.get("startimes", [])
         end_times = response_data.get("endtimes", [])
+        start_times = [time_to_minutes(t) for t in start_times]
+        end_times = [time_to_minutes(t) for t in end_times]
         ids = response_data.get("ids",[])
 
         for i in range(0,len(start_times)):
@@ -47,15 +53,14 @@ def fetch_and_check_bookings(sl_tz, last_msg_recived_at_sl_time_zone):
 
 
 def on_message(client, userdata, msg):
-    global last_msg_recived_at,sl_tz,last_msg_recived_at_sl_time_zone
-    if time.time() - last_msg_recived_at > 16: ## here 16 seconds is used only for testing purposes
-        fetch_and_check_bookings(sl_tz, last_msg_recived_at_sl_time_zone)
-        last_msg_recived_at = time.time()
+    global last_msg_recived_at,sl_tz
+    if datetime.now(sl_tz) - last_msg_recived_at > 16: ## here 16 seconds is used only for testing purposes
+        fetch_and_check_bookings(sl_tz, last_msg_recived_at)
+        last_msg_recived_at = datetime.now(sl_tz)
     
     message = msg.payload.decode()
     if message == "Motion detected":
-        last_msg_recived_at = time.time()
-        last_msg_recived_at_sl_time_zone = datetime.now(sl_tz)
+        last_msg_recived_at = datetime.now(sl_tz)
 
     print(message)
 
