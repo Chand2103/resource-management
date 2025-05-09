@@ -37,8 +37,11 @@ def read_root():
    response = supabase.table("Resources").select("*").execute()
    return response
 
+@app.get("/get-resources")
+def get_resources():
+    return supabase.table("Resources").select("*").execute().data
 
-@app.post("/resource-insert/")
+@app.post("/resource-insert")
 def insert_resource(resource: Resource):
     response = (
         supabase.table("Resources")
@@ -189,6 +192,11 @@ class Person(BaseModel):
     name:str
     occupation:str
     contact_number:str
+
+@app.get("/get-people")
+def get_people():
+    return supabase.table("People").select("*").execute().data
+
 
 @app.post("/add-people")
 def add_people(person:Person):
