@@ -2,12 +2,13 @@ import os
 from supabase import create_client, Client
 from typing import Union
 from pydantic import BaseModel
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from or_tools import check_availabiliy
 import json
 from datetime import date
 from datetime import time
+from dependencies.auth import get_current_user
 
 app = FastAPI()
 
@@ -133,7 +134,7 @@ def modify_booking(request : ModifyBookingRequest):
 
 
 @app.get("/get-bookings")
-def get_resources():
+def get_resources(user = Depends(get_current_user)):
     return supabase.table("Bookings").select("*").execute().data
     
 @app.get("/get-bookings-resource") ##this api endpoint is associated with the IoT part
@@ -196,12 +197,12 @@ class Person(BaseModel):
     contact_number:str
 
 @app.get("/get-people")
-def get_people():
+def get_people(user = Depends(get_current_user)):
     return supabase.table("People").select("*").execute().data
 
 
 @app.post("/add-people")
-def add_people(person:Person):
+def add_people(person:Person,user = Depends(get_current_user)):
     (
             supabase.table("People")
             .insert(
@@ -217,7 +218,7 @@ def add_people(person:Person):
 
 
 @app.put("/assign-people")
-def assign_people(person_id : int,resource: int):
+def assign_people(person_id : int,resource: int,user = Depends(get_current_user)):
         (
             supabase.table("People")
             .update(
