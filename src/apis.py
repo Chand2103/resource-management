@@ -4,7 +4,7 @@ from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from ORtools import check_availabiliy
+from or_tools import check_availabiliy
 import json
 from datetime import date
 from datetime import time
