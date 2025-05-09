@@ -132,9 +132,11 @@ def modify_booking(request : ModifyBookingRequest):
         print("Resource not available on the specified time slot")
 
 
-
+@app.get("/get-bookings")
+def get_resources():
+    return supabase.table("Bookings").select("*").execute().data
     
-@app.get("/get-bookings") ##this api endpoint is associated with the IoT part
+@app.get("/get-bookings-resource") ##this api endpoint is associated with the IoT part
 def get_bookings(resource_name: str, booked_date: str):
     response1 = (
         supabase.table("Bookings").select("booking_endtime","booking_starttime","id")

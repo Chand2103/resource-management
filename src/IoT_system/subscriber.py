@@ -31,7 +31,7 @@ def fetch_and_check_bookings(sl_tz, last_msg_recived_at):
         "booked_date": date
     }
 
-    response = requests.get("http://127.0.0.1:8000/get-bookings", params=params)
+    response = requests.get("http://127.0.0.1:8000/get-bookings-resource", params=params)
     if response.status_code == 200:
         response_data = response.json()
         start_times = response_data.get("startimes", [])
