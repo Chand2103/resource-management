@@ -183,6 +183,39 @@ def check_availability(resource_name : str ,booking_date :str):
         time_slot = f"{x["booking_starttime"]} : {x["booking_endtime"]}"
         already_booked.append(time_slot)
     return already_booked
-    
 
+
+class Person(BaseModel):
+    name:str
+    occupation:str
+    contact_number:str
+
+@app.post("/add-people")
+def add_people(person:Person):
+    (
+            supabase.table("People")
+            .insert(
+                  {
+                     "name" : person.name,
+                     "occupation" : person.occupation,
+                     "contact_number" : person.contact_number,
+
+                  }
+            ).execute()
+         )
+    print("booking done successfully")
+
+
+@app.put("/assign-people")
+def assign_people(person_id : int,resource: int):
+        (
+            supabase.table("People")
+            .update(
+                  {
+                     "resource_assigned":resource
+                  }
+            )
+            .eq('id',person_id)
+            .execute()
+         )
     
