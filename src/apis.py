@@ -4,11 +4,12 @@ from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from or_tools import check_availabiliy
+from .or_tools import check_availabiliy
 import json
 from datetime import date
 from datetime import time
-from dependencies.auth import get_current_user
+from .dependencies.auth import get_current_user
+
 
 app = FastAPI()
 
@@ -89,8 +90,10 @@ def create_booking(booking : Booking):
             ).execute()
          )
          print("booking done successfully")
+         return {"booking_id": response2.data[0]["id"]}
    else:
        print("Resource not available on the specified time slot")
+       return {"error": "Resource not available on the specified time slot"}
 
 
 class ModifyBookingRequest(BaseModel):
@@ -186,7 +189,7 @@ def check_availability(resource_name : str ,booking_date :str):
     already_booked = []
 
     for x in response.data:
-        time_slot = f"{x["booking_starttime"]} : {x["booking_endtime"]}"
+        time_slot = f"{x['booking_starttime']} : {x['booking_endtime']}"
         already_booked.append(time_slot)
     return already_booked
 

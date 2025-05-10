@@ -1,0 +1,14 @@
+fastapi>=0.68.0,<0.69.0
+uvicorn>=0.15.0,<0.16.0
+supabase>=0.0.2,<0.1.0
+python-jose>=3.3.0,<3.4.0
+pydantic>=1.8.0,<2.0.0
+ortools>=9.0.0,<10.0.0
+paho-mqtt>=1.6.0,<1.7.0
+opencv-python>=4.5.0,<4.6.0
+requests>=2.26.0,<2.27.0
+pytz>=2021.1,<2022.0
+python-multipart>=0.0.5,<0.0.6
+pytest>=7.0.0,<8.0.0
+pytest-asyncio>=0.18.0,<0.19.0
+httpx>=0.23.0,<0.24.0 
