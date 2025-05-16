@@ -217,7 +217,6 @@ def add_people(person:Person,user = Depends(get_current_user)):
                   }
             ).execute()
          )
-    print("booking done successfully")
 
 
 @app.put("/assign-people")
