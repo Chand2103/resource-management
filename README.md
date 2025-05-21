@@ -141,10 +141,3 @@ The system integrates with IoT devices using MQTT protocol:
 
 To use the IoT functionality, ensure you have a running MQTT broker (like Mosquitto).
 
-## License
-
-[MIT](LICENSE)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. 
