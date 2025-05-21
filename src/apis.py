@@ -2,13 +2,14 @@ import os
 from supabase import create_client, Client
 from typing import Union
 from pydantic import BaseModel
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends,Request,Query
 from fastapi.middleware.cors import CORSMiddleware
 from .or_tools import check_availabiliy
 import json
 from datetime import date
 from datetime import time
 from .dependencies.auth import get_current_user
+
 
 
 app = FastAPI()
@@ -20,6 +21,7 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
 )
+
 
 SUPABASE_URL = "https://xoyzsjymkfcwtumzqzha.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhveXpzanlta2Zjd3R1bXpxemhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTk4MTUsImV4cCI6MjA1OTc5NTgxNX0.VLMHbn4-rMaz9DWK1zcIJccWBnaQhrepek-umKH2s0Y"
@@ -33,11 +35,11 @@ class Resource(BaseModel):
     name: str
     type: str
     capacity :int
+    location : str
 
 @app.get("/")
 def read_root():
-   response = supabase.table("Resources").select("*").execute()
-   return response
+    print("resource-management-services are running")
 
 @app.get("/get-resources")
 def get_resources():
@@ -50,8 +52,43 @@ def insert_resource(resource: Resource):
         .insert({
             "resource_name": resource.name,
             "resource_type": resource.type,
-            "capacity":resource.capacity
+            "capacity":resource.capacity,
+            "location":resource.location
         })
+        .execute()
+    )
+    return response
+class ResourceUpdate(BaseModel):
+    name: str
+    type: str
+    capacity: int
+    location :str
+
+@app.put("/resource-update/{resource_id}")
+def update_resource(resource_id: int, updated_resource: ResourceUpdate):
+    response = (
+        supabase.table("Resources")
+        .update({
+            "resource_name": updated_resource.name,
+            "resource_type": updated_resource.type,
+            "capacity": updated_resource.capacity,
+            "location":updated_resource.location
+        })
+        .eq("id", resource_id)
+        .execute()
+    )
+    
+    if len(response.data) == 0:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    
+    return {"message": "Resource updated successfully", "data": response.data}
+
+@app.delete("/resource-delete/{resource_id}")
+def delete_resource(resource_id: str):
+    response = (
+        supabase.table("Resources")
+        .delete()
+        .eq("id", resource_id)
         .execute()
     )
     return response
@@ -96,49 +133,34 @@ def create_booking(booking : Booking):
        return {"error": "Resource not available on the specified time slot"}
 
 
-class ModifyBookingRequest(BaseModel):
-    new_booking: Booking
-    old_booking: Booking
+class UpdateBookingRequest(BaseModel):
+    id: int
+    date: str
+    startTime: str
+    endTime: str
+    # add any other fields you want to update
 
+@app.put("/booking-update")
+def update_booking(request: UpdateBookingRequest):
+    # Replace this with your actual DB update logic using Supabase or ORM
+    response = supabase.table("Bookings").update({
+        "booking_on": request.date,
+        "booking_starttime": request.startTime,
+        "booking_endtime": request.endTime,
+        # other fields here
+    }).eq("id", request.id).execute()
 
-
-@app.post("/modify-booking")
-def modify_booking(request : ModifyBookingRequest):
-    response_1 = (supabase.table("Bookings").select("id").eq("resource_name",request.old_booking.resource_name).eq("booking_on",request.old_booking.booked_date)
-                  .eq("booking_starttime",request.old_booking.start).eq("booking_endtime",request.old_booking.end).execute())
-    
-    current_booking_id = response_1.data[0]["id"]
-    
-    response_2 = (
-        supabase.table("Bookings").select("booking_endtime","booking_starttime")
-        .eq("booking_on",request.new_booking.booked_date).eq("resource_name",request.new_booking.resource_name).neq("id",current_booking_id)
-        .execute()
-    )
-    startimes=[]
-    endtimes=[]
-    for x in response_2.data:
-       startimes.append(x["booking_starttime"])
-       endtimes.append(x["booking_endtime"])
-    available = check_availabiliy(startimes,endtimes,request.new_booking.start,request.new_booking.end)
-    if available:
-       supabase.table("Bookings") \
-        .update({
-        "booked_by": request.new_booking.booked_by,
-        "resource_name": request.new_booking.resource_name,
-        "booking_starttime": request.new_booking.start,
-        "booking_endtime": request.new_booking.end,
-        "booking_on": request.new_booking.booked_date
-    }) \
-    .eq("id", current_booking_id) \
-    .execute()
-       print("booking modified successfully")
-    else:
-        print("Resource not available on the specified time slot")
+    if response.data:
+        return response.data[0]  # return updated booking
 
 
 @app.get("/get-bookings")
-def get_resources(user = Depends(get_current_user)):
+def get_resources():
     return supabase.table("Bookings").select("*").execute().data
+
+@app.get("/get-bookings-user")
+def get_resources(userid: str = Query(...)):
+    return supabase.table("Bookings").select("*").eq("booked_by",userid).execute().data
     
 @app.get("/get-bookings-resource") ##this api endpoint is associated with the IoT part
 def get_bookings(resource_name: str, booked_date: str):
@@ -200,12 +222,12 @@ class Person(BaseModel):
     contact_number:str
 
 @app.get("/get-people")
-def get_people(user = Depends(get_current_user)):
+def get_people():
     return supabase.table("People").select("*").execute().data
 
 
 @app.post("/add-people")
-def add_people(person:Person,user = Depends(get_current_user)):
+def add_people(person:Person):
     (
             supabase.table("People")
             .insert(
@@ -220,7 +242,7 @@ def add_people(person:Person,user = Depends(get_current_user)):
 
 
 @app.put("/assign-people")
-def assign_people(person_id : int,resource: int,user = Depends(get_current_user)):
+def assign_people(person_id : int,resource: int):
         (
             supabase.table("People")
             .update(
